@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Empathy Engine</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Empathy Engine</h1>
+            <p>Giving AI a Human Voice</p>
+        </header>
+
+        <main>
+            <div class="input-section">
+                <textarea id="textInput" placeholder="Type something... e.g., 'I am so excited about this news!' or 'I'm really frustrated with this result.'"></textarea>
+                
+                <div class="controls">
+                    <button id="analyzeBtn">Analyze Emotion</button>
+                    <button id="speakBtn" class="primary">Speak</button>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <div class="emotion-display">
+                    <span class="label">Detected Emotion:</span>
+                    <span id="emotionResult" class="emotion-tag hidden">Neutral</span>
+                </div>
+                
+                <div id="audioContainer" class="hidden">
+                    <audio id="audioPlayer" controls></audio>
+                </div>
+
+                <div id="loading" class="hidden">Processing...</div>
+            </div>
+            
+            <div class="details-section">
+               <details>
+                   <summary>Technical Details</summary>
+                   <pre id="jsonResult">Waiting for input...</pre>
+               </details>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const textInput = document.getElementById('textInput');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const speakBtn = document.getElementById('speakBtn');
+        const emotionResult = document.getElementById('emotionResult');
+        const audioContainer = document.getElementById('audioContainer');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const jsonResult = document.getElementById('jsonResult');
+        const loading = document.getElementById('loading');
+
+        async function postData(url, data) {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            return response.json();
+        }
+
+        function updateUI(emotion, details) {
+            emotionResult.textContent = emotion.toUpperCase();
+            emotionResult.className = `emotion-tag ${emotion}`;
+            emotionResult.classList.remove('hidden');
+            
+            if (details) {
+                jsonResult.textContent = JSON.stringify(details, null, 2);
+            }
+        }
+
+        analyzeBtn.addEventListener('click', async () => {
+            const text = textInput.value;
+            if (!text) return;
+
+            loading.classList.remove('hidden');
+            try {
+                const data = await postData('/api/analyze', { text });
+                updateUI(data.emotion, data.details);
+            } catch (err) {
+                console.error(err);
+                alert('Error analyzing text');
+            } finally {
+                loading.classList.add('hidden');
+            }
+        });
+
+        speakBtn.addEventListener('click', async () => {
+             const text = textInput.value;
+            if (!text) return;
+
+            loading.classList.remove('hidden');
+            audioContainer.classList.add('hidden');
+            
+            try {
+                const data = await postData('/api/speak', { text });
+                updateUI(data.emotion);
+                
+                audioPlayer.src = data.audio_url;
+                audioContainer.classList.remove('hidden');
+                audioPlayer.play();
+                
+            } catch (err) {
+                 console.error(err);
+                alert('Error generating audio');
+            } finally {
+                loading.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
